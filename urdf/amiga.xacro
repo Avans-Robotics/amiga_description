@@ -1,0 +1,108 @@
+<?xml version="1.0"?>
+<!--
+  farm-ng Amiga, 60 in track, 31 in wheelbase, without Intelligence Kit (bare chassis with dash).
+  Dimensions from a FreeCAD model of the Amiga. Units: metres. REP-103: X forward, Y left, Z up.
+
+  Frames (all names get the macro's prefix):
+    base_footprint   ground plane under the centre of the four wheel axles
+    base_link        centre of the four wheel axles, at axle height
+    *_wheel_link     wheel centres, continuous joints about Y
+
+  Geometry is boxes and cylinders (visual = collision), the wheels use a mesh for the visual.
+  Masses are estimates.
+-->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:property name="amiga_wheel_radius" value="0.216"/>
+  <xacro:property name="amiga_wheel_width"  value="0.104"/>
+  <xacro:property name="amiga_wheel_mass"   value="7.0"/>    <!-- estimate -->
+  <xacro:property name="amiga_base_mass"    value="110.0"/>  <!-- estimate, update after weighing -->
+  <xacro:property name="amiga_wheel_x"      value="0.3937"/> <!-- half wheelbase (31 in) -->
+  <xacro:property name="amiga_wheel_y"      value="0.762"/>  <!-- half track (60 in) -->
+
+  <!-- One chassis part: the same box as visual and collision -->
+  <xacro:macro name="amiga_box" params="xyz size color">
+    <visual>
+      <origin xyz="${xyz}" rpy="0 0 0"/>
+      <geometry><box size="${size}"/></geometry>
+      <material name="amiga_${color}"/>
+    </visual>
+    <collision>
+      <origin xyz="${xyz}" rpy="0 0 0"/>
+      <geometry><box size="${size}"/></geometry>
+    </collision>
+  </xacro:macro>
+
+  <xacro:macro name="amiga_wheel" params="prefix name side x y">
+    <link name="${prefix}${name}_wheel_link">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry><mesh filename="package://amiga_description/meshes/wheel_${side}.stl"/></geometry>
+        <material name="amiga_black"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="${pi/2} 0 0"/>
+        <geometry><cylinder radius="${amiga_wheel_radius}" length="${amiga_wheel_width}"/></geometry>
+      </collision>
+      <inertial>
+        <origin xyz="0 0 0" rpy="${pi/2} 0 0"/>
+        <mass value="${amiga_wheel_mass}"/>
+        <inertia ixx="${amiga_wheel_mass*(3*amiga_wheel_radius**2+amiga_wheel_width**2)/12}" ixy="0" ixz="0"
+                 iyy="${amiga_wheel_mass*(3*amiga_wheel_radius**2+amiga_wheel_width**2)/12}" iyz="0"
+                 izz="${amiga_wheel_mass*amiga_wheel_radius**2/2}"/>
+      </inertial>
+    </link>
+    <joint name="${prefix}${name}_wheel_joint" type="continuous">
+      <parent link="${prefix}base_link"/>
+      <child link="${prefix}${name}_wheel_link"/>
+      <origin xyz="${x} ${y} 0" rpy="0 0 0"/>
+      <axis xyz="0 1 0"/>
+    </joint>
+  </xacro:macro>
+
+  <!-- The Amiga. prefix: prepended to every link and joint name, e.g. "amiga_" -->
+  <xacro:macro name="amiga" params="prefix:=''">
+
+    <link name="${prefix}base_footprint"/>
+    <joint name="${prefix}base_footprint_joint" type="fixed">
+      <parent link="${prefix}base_footprint"/>
+      <child link="${prefix}base_link"/>
+      <origin xyz="0 0 ${amiga_wheel_radius}" rpy="0 0 0"/>
+    </joint>
+
+    <link name="${prefix}base_link">
+      <!-- side beams -->
+      <xacro:amiga_box xyz="0 ${amiga_wheel_y} 0.364"  size="1.128 0.160 0.040" color="grey"/>
+      <xacro:amiga_box xyz="0 ${-amiga_wheel_y} 0.364" size="1.128 0.160 0.040" color="grey"/>
+      <!-- cross tubes (front, rear) -->
+      <xacro:amiga_box xyz="0.394 0 0.415"  size="0.040 1.676 0.040" color="grey"/>
+      <xacro:amiga_box xyz="-0.394 0 0.415" size="0.040 1.676 0.040" color="grey"/>
+      <!-- wheel forks (motor housings) -->
+      <xacro:amiga_box xyz="0.394 0.774 0.192"   size="0.330 0.236 0.420" color="white"/>
+      <xacro:amiga_box xyz="0.394 -0.774 0.192"  size="0.330 0.236 0.420" color="white"/>
+      <xacro:amiga_box xyz="-0.394 0.774 0.192"  size="0.330 0.236 0.420" color="white"/>
+      <xacro:amiga_box xyz="-0.394 -0.774 0.192" size="0.330 0.236 0.420" color="white"/>
+      <!-- dash mast -->
+      <xacro:amiga_box xyz="-0.172 -0.763 0.553" size="0.162 0.218 0.576" color="black"/>
+      <inertial>
+        <origin xyz="0 0 0.3" rpy="0 0 0"/>
+        <mass value="${amiga_base_mass}"/>
+        <inertia ixx="${amiga_base_mass*(1.68**2+0.6**2)/12}" ixy="0" ixz="0"
+                 iyy="${amiga_base_mass*(1.13**2+0.6**2)/12}" iyz="0"
+                 izz="${amiga_base_mass*(1.13**2+1.68**2)/12}"/>
+      </inertial>
+    </link>
+
+    <xacro:amiga_wheel prefix="${prefix}" name="front_left"  side="left"  x="${amiga_wheel_x}"  y="${amiga_wheel_y}"/>
+    <xacro:amiga_wheel prefix="${prefix}" name="front_right" side="right" x="${amiga_wheel_x}"  y="${-amiga_wheel_y}"/>
+    <xacro:amiga_wheel prefix="${prefix}" name="rear_left"   side="left"  x="${-amiga_wheel_x}" y="${amiga_wheel_y}"/>
+    <xacro:amiga_wheel prefix="${prefix}" name="rear_right"  side="right" x="${-amiga_wheel_x}" y="${-amiga_wheel_y}"/>
+
+  </xacro:macro>
+
+  <!-- Materials, referenced by name from the visuals above -->
+  <material name="amiga_grey"><color rgba="0.40 0.40 0.40 1"/></material>
+  <material name="amiga_white"><color rgba="0.93 0.93 0.91 1"/></material>
+  <material name="amiga_black"><color rgba="0.10 0.10 0.10 1"/></material>
+
+</robot>
