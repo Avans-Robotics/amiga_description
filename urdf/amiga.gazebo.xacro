@@ -1,0 +1,62 @@
+<?xml version="1.0"?>
+<!--
+  Gazebo (gz sim, Harmonic) additions for the Amiga: skid-steer drive and wheel joint states.
+  Call amiga_gazebo after the amiga macro, with the same prefix.
+
+  Gazebo topics (bridge them to ROS with ros_gz_bridge):
+    /<prefix>cmd_vel              gz.msgs.Twist      in:  velocity command (geometry_msgs/Twist in ROS)
+    /<prefix>wheel/odometry       gz.msgs.Odometry   out: wheel odometry, odom -> base_footprint
+    /<prefix>tf                   gz.msgs.Pose_V     out: the same as TF (bridge it only if nothing else publishes odom)
+    /<prefix>wheel_joint_states   gz.msgs.Model      out: wheel joint states
+-->
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- Wheel-ground friction. fdir1 points along the wheel axle, so mu1 is sideways and mu2
+       is along the rolling direction. Skid steer slides its wheels sideways when it turns:
+       a lower sideways friction turns faster. Tune against the real robot. -->
+  <xacro:property name="amiga_wheel_mu_side" value="0.5"/>
+  <xacro:property name="amiga_wheel_mu_roll" value="1.0"/>
+
+  <xacro:macro name="amiga_wheel_friction" params="link">
+    <gazebo reference="${link}">
+      <mu1>${amiga_wheel_mu_side}</mu1>
+      <mu2>${amiga_wheel_mu_roll}</mu2>
+      <fdir1>0 0 1</fdir1>  <!-- collision frame: the cylinder axis, i.e. the axle -->
+    </gazebo>
+  </xacro:macro>
+
+  <!-- Needs amiga.xacro included first (uses its wheel properties). -->
+  <xacro:macro name="amiga_gazebo" params="prefix:=''">
+
+    <xacro:amiga_wheel_friction link="${prefix}front_left_wheel_link"/>
+    <xacro:amiga_wheel_friction link="${prefix}front_right_wheel_link"/>
+    <xacro:amiga_wheel_friction link="${prefix}rear_left_wheel_link"/>
+    <xacro:amiga_wheel_friction link="${prefix}rear_right_wheel_link"/>
+
+    <gazebo>
+      <plugin filename="gz-sim-diff-drive-system" name="gz::sim::systems::DiffDrive">
+        <left_joint>${prefix}front_left_wheel_joint</left_joint>
+        <left_joint>${prefix}rear_left_wheel_joint</left_joint>
+        <right_joint>${prefix}front_right_wheel_joint</right_joint>
+        <right_joint>${prefix}rear_right_wheel_joint</right_joint>
+        <wheel_separation>${2 * amiga_wheel_y}</wheel_separation>
+        <wheel_radius>${amiga_wheel_radius}</wheel_radius>
+        <topic>/${prefix}cmd_vel</topic>
+        <odom_topic>/${prefix}wheel/odometry</odom_topic>
+        <tf_topic>/${prefix}tf</tf_topic>
+        <frame_id>${prefix}odom</frame_id>
+        <child_frame_id>${prefix}base_footprint</child_frame_id>
+        <odom_publish_frequency>30</odom_publish_frequency>
+      </plugin>
+      <plugin filename="gz-sim-joint-state-publisher-system" name="gz::sim::systems::JointStatePublisher">
+        <topic>/${prefix}wheel_joint_states</topic>
+        <joint_name>${prefix}front_left_wheel_joint</joint_name>
+        <joint_name>${prefix}front_right_wheel_joint</joint_name>
+        <joint_name>${prefix}rear_left_wheel_joint</joint_name>
+        <joint_name>${prefix}rear_right_wheel_joint</joint_name>
+      </plugin>
+    </gazebo>
+
+  </xacro:macro>
+
+</robot>
