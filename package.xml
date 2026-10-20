@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>amiga_description</name>
-  <version>0.4.0</version>
+  <version>0.5.0</version>
   <description>URDF/xacro model of the farm-ng Amiga (60 in track, 31 in wheelbase, without Intelligence Kit), as a reusable macro.</description>
   <maintainer email="andriesvandongen@gmail.com">Andries van Dongen</maintainer>
   <license>Apache-2.0</license>

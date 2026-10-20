@@ -13,7 +13,7 @@ repositories:
   amiga_description:
     type: git
     url: https://github.com/Avans-Robotics/amiga_description.git
-    version: v0.4.0
+    version: v0.5.0
 ```
 
 ```bash
@@ -68,7 +68,37 @@ REP-103: X forward, Y left, Z up. Units: metres.
 
 The chassis is modelled with boxes (side beams, cross tubes, wheel forks, dash mast), used for both visual and collision. The wheels have a mesh visual and a cylinder collision. Masses are estimates.
 
-No Gazebo or `ros2_control` tags yet: add them per simulation for now.
+## Gazebo
+
+[`urdf/amiga.gazebo.xacro`](urdf/amiga.gazebo.xacro) adds a skid-steer drive (gz sim DiffDrive system) and wheel joint states for Gazebo Harmonic. Include it after the Amiga:
+
+```xml
+<xacro:include filename="$(find amiga_description)/urdf/amiga.gazebo.xacro"/>
+<xacro:amiga_gazebo prefix=""/>
+```
+
+or use the standalone model with `gazebo:=true`. Gazebo topics, to bridge with `ros_gz_bridge`:
+
+| Gazebo topic | Type | ROS type | Direction |
+|---|---|---|---|
+| `/cmd_vel` | `gz.msgs.Twist` | `geometry_msgs/msg/Twist` | ROS to Gazebo: velocity command, the same topic and type as on the real robot |
+| `/wheel/odometry` | `gz.msgs.Odometry` | `nav_msgs/msg/Odometry` | Gazebo to ROS: wheel odometry, `odom` to `base_footprint` |
+| `/tf` | `gz.msgs.Pose_V` | `tf2_msgs/msg/TFMessage` | Gazebo to ROS: the odometry as TF; skip it if something else (an EKF) publishes `odom` |
+| `/wheel_joint_states` | `gz.msgs.Model` | `sensor_msgs/msg/JointState` | Gazebo to ROS: wheel joints, bridge to `/joint_states` |
+
+With a prefix, every topic starts with it. Wheel friction is set by `amiga_wheel_mu_side` and `amiga_wheel_mu_roll` in that file: tune them against the real robot.
+
+Example bridge:
+
+```bash
+ros2 run ros_gz_bridge parameter_bridge \
+  /cmd_vel@geometry_msgs/msg/Twist]gz.msgs.Twist \
+  /wheel/odometry@nav_msgs/msg/Odometry[gz.msgs.Odometry \
+  /tf@tf2_msgs/msg/TFMessage[gz.msgs.Pose_V \
+  /wheel_joint_states@sensor_msgs/msg/JointState[gz.msgs.Model --ros-args -r /wheel_joint_states:=/joint_states
+```
+
+No `ros2_control` tags: the drive uses the Gazebo system directly, so `/cmd_vel` stays a plain `Twist`.
 
 ## Credits
 
