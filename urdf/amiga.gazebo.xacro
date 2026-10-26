@@ -11,6 +11,14 @@
 -->
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 
+  <!-- Collide bit 0 only: these collisions still touch anything with the default bitmask
+       (0xFFFF: ground planes, obstacles, the arm), but nothing that leaves bit 0 out. pixelfield
+       Plants do (robot interface 2), so the Amiga drives over crop beds without picking or
+       crushing Plants; wheels pressing gram-light leaves into the soil stall the simulation. -->
+  <xacro:macro name="amiga_soil_only_collision">
+    <collision><surface><contact><collide_bitmask>0x01</collide_bitmask></contact></surface></collision>
+  </xacro:macro>
+
   <!-- Wheel-ground friction. fdir1 points along the wheel axle, so mu1 is sideways and mu2
        is along the rolling direction. Skid steer slides its wheels sideways when it turns:
        a lower sideways friction turns faster. Tune against the real robot. -->
@@ -22,6 +30,8 @@
       <mu1>${amiga_wheel_mu_side}</mu1>
       <mu2>${amiga_wheel_mu_roll}</mu2>
       <fdir1>0 0 1</fdir1>  <!-- collision frame: the cylinder axis, i.e. the axle -->
+      <!-- In this block, not a second one: a second collision block for the link drops mu. -->
+      <xacro:amiga_soil_only_collision/>
     </gazebo>
   </xacro:macro>
 
@@ -32,6 +42,10 @@
     <xacro:amiga_wheel_friction link="${prefix}front_right_wheel_link"/>
     <xacro:amiga_wheel_friction link="${prefix}rear_left_wheel_link"/>
     <xacro:amiga_wheel_friction link="${prefix}rear_right_wheel_link"/>
+
+    <gazebo reference="${prefix}base_link">
+      <xacro:amiga_soil_only_collision/>
+    </gazebo>
 
     <gazebo>
       <plugin filename="gz-sim-diff-drive-system" name="gz::sim::systems::DiffDrive">
