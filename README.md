@@ -13,7 +13,7 @@ repositories:
   amiga_description:
     type: git
     url: https://github.com/Avans-Robotics/amiga_description.git
-    version: v0.5.1
+    version: v0.6.0
 ```
 
 ```bash
