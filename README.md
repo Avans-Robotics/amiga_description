@@ -88,6 +88,8 @@ or use the standalone model with `gazebo:=true`. Gazebo topics, to bridge with `
 
 With a prefix, every topic starts with it. Wheel friction is set by `amiga_wheel_mu_side` and `amiga_wheel_mu_roll` in that file: tune them against the real robot.
 
+The chassis and wheel collisions use collide bit 0 only (`collide_bitmask` 0x01). They touch everything with the default bitmask (ground planes, obstacles, an arm) as before, but not collisions that leave bit 0 out, such as the Plants of a [pixelfield](https://github.com/Avans-Robotics/AgriSim) Field (robot interface 2): the Amiga drives over crop beds without picking or crushing Plants, which would otherwise stall the simulation.
+
 Example bridge:
 
 ```bash
